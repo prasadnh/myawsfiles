@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Appliance Stack
+Parameters:
+  EC2InstanceType:
+    Type: String
+    Description: EC2 instance type for auth0 instance
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - m3.large
+      - r3.large
+      - t1.micro
+  Vpc:
+    Type: AWS::EC2::VPC::Id
+    Description: ID of existing product VPC
+    Default: vpc-291b1151 #(test account) #vpc-3363ac4a(CS product zone) #vpc-e5885d9c(CS management zone)
+  ProductAccessSubnets:
+    Type: CommaDelimitedList
+    Description: "Comma delimited list of access subnets for the external and internal ELB"
+    Default: subnet-93b4d4ce #(test account) #subnet-947c40f1 (CS product zone) #subnet-6fefd10a (CS management zone)
+  ELBLoggingBucketName:
+    Type: String
+    Description: S3 ELB Logging Bucket
+    Default: 498172796075-us-east-1-elb-traffic-logs
+  EC2ServerLogsBucketName:
+    Type: String
+    Description: S3 ELB Logging Bucket
+    Default: 498172796075-us-east-1-ec2-server-logs
+  AMIId:
+    Type: String
+    Description: Auth0 AMI ID
+    AllowedPattern: "(^ami-[0-9a-z]{8}$)"
+    ConstraintDescription: Must be a ami id.
+    Default: ami-45d6ae3f #ASbackup #ami-45d6ae3f (Auth0 ami), our ami ami-340a3a4e
+  EC2SecGroup:
+    Type: String
+    Description: Security group of bastion host for EC2 instance
+    Default: sg-ca67adbd
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Provide existing public/private key pair
+    Default: auth0-dev
+Resources:
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Env
+          Value: Instance
+  auEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyPairName
+      ImageId: !Ref AMIId
+      SubnetId: !Ref ProcessingSubnets
+      SecurityGroupIds:
+        - !Ref ServerSecurityGroup #EC2SecGroup
+      InstanceType: !Ref EC2InstanceType
+      Tags:
+      - Key: Name
+        Value: auth0-1-dev-ec2-server
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - ''
+          - - "#!/bin/bash\n"
+            - 'exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console)
+              2>&1 '
+            - "\n"
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdb"
+        Ebs:
+          VolumeSize: '100'
+          VolumeType: gp2
+      - DeviceName: "/dev/sdc"
+        Ebs:
+          VolumeSize: '100'
+          VolumeType: gp2

@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EC2 Appliance Stack
+Parameters:
+  EC2InstanceType:
+    Type: String
+    Description: EC2 instance type
+    Default: m3.medium
+    AllowedValues:
+      - t2.micro
+      - m3.medium
+      - r3.large
+      - t1.micro
+  Vpc:
+    Type: AWS::EC2::VPC::Id
+    Description: List of all VPCs
+    Default: vpc-0acbd76f 
+  AMIId:
+    Type: String
+    Description: MyMiniProject AMI ID
+    AllowedPattern: "(^ami-[0-9a-z]{8}$)"
+    ConstraintDescription: Must be a ami id.
+    Default: ami-bf5540df
+  EC2SecGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: SSH Security group for EC2 instance
+    Default: sg-dee07fa7
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Provide existing public/private key pair
+    Default: trng2
+Resources:
+  ServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 Security Group
+      VpcId: !Ref Vpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Env
+          Value: Instance
+  auEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyPairName
+      ImageId: !Ref AMIId
+      SecurityGroupIds:
+        - !Ref ServerSecurityGroup 
+      InstanceType: !Ref EC2InstanceType
+      Tags:
+      - Key: Name
+        Value: MyMiniProject-1-dev-ec2-server
+      UserData: !Base64 
+        'Fn::Join':
+          - ''
+          - - |
+              #!/bin/bash -xe
+            - |
+              yum install httpd -y
+            - |
+              yum update -y
+            - |
+              echo "<html><body> <h1> Automation for the People </h1></body></html>" > /var/www/html/index.html
+            - |
+              service httpd start
+            - |
+              chkconfig httpd on
+              |+
+
+
+      # BlockDeviceMappings:
+      # - DeviceName: "/dev/sdb"
+      #   Ebs:
+      #     VolumeSize: '100'
+      #     VolumeType: gp2
+      # - DeviceName: "/dev/sdc"
+      #   Ebs:
+      #     VolumeSize: '100'
+      #     VolumeType: gp2
