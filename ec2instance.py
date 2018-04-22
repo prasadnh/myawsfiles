@@ -9,12 +9,13 @@ echo "<html><body><h1> Automation for the people </h1></body></html>" >> /var/ww
 service httpd start
 chkconfig httpd on"""
 myInstance = ''
+
 def createEC2Instance():
     instance = ec2.create_instances(
         ImageId='ami-bf5540df',
         MinCount=1,
         MaxCount=1,
-        InstanceType='m3.medium', UserData=user_data_shell)
+        InstanceType='m3.medium', UserData=user_data_shell, )
     print instance[0].id
 
 
@@ -22,7 +23,7 @@ def createEC2Instance():
 def scriptrun():
     print "test bootable script"
 #ListInstance
-def listInstance:
+def listInstance():
     for instance in ec2.instances.all():
         print instance.id, instance.state
         print "Instance creation successful"
@@ -35,6 +36,7 @@ def terminateInstance():
         print response
 
 def main():
+    print "test my python"
 
 
 if __name__ == '__main__':
